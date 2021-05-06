@@ -9,7 +9,6 @@ from connected_pendulums import InitState
 import pygame as pg
 import math
 
-fps = 60
 
 red = (255, 0, 0)
 green = (0, 255, 0)
@@ -36,41 +35,18 @@ susp_height = (lta_susp - p11)()[1]
 pend_radius = 10
 
 
-def main():
-    """ Run the program """
-    phi1 = float(input('phi1 (degrees): '))
-    phi1_dot = float(input('phi1_dot (degrees/sec): '))
-    phi2 = float(input('phi2 (degrees): '))
-    phi2_dot = float(input('phi2_dot (degrees/sec): '))
-    phi3 = float(input('phi3 (degrees): '))
-    phi3_dot = float(input('phi3_dot (degrees/sec): '))
+def start_modeling(pendulums: ConnectedPendulums):
+    """ Show animation and plots """
+    phis, phis_dot = pendulums.get_current_state()
 
-    phi1 *= math.pi / 180
-    phi2 *= math.pi / 180
-    phi3 *= math.pi / 180
+    phis.reshape((3,))
+    phis_dot.reshape((3,))
 
-    phi1_dot *= math.pi / 180
-    phi2_dot *= math.pi / 180
-    phi3_dot *= math.pi / 180
+    phis1, phis2, phis3 = [phis[0]], [phis[1]], [phis[2]]
+    phis1_dot, phis2_dot, phis3_dot = [phis_dot[0]], [phis_dot[1]], [phis_dot[2]]
 
-    m1 = float(input('Mass 1 (kg): '))
-    m2 = float(input('Mass 2 (kg): '))
-    m3 = float(input('Mass 3 (kg): '))
-
-    pendulum1 = InitState(phi1, phi1_dot, m1)
-    pendulum2 = InitState(phi2, phi2_dot, m2)
-    pendulum3 = InitState(phi3, phi3_dot, m3)
-
-    k1 = float(input('k1 (N/kg): '))
-    k2 = float(input('k2 (N/kg): '))
-
-    l = float(input('Length (m): '))
-    betta = float(input('betta : '))
-
-    dt = 1 / fps
-
-    pendulums = ConnectedPendulums(dt, pendulum1, pendulum2, pendulum3,
-                                   k1=k1, k2=k2, l=l, betta=betta)
+    dt = pendulums.get_timestep()
+    t = [0.0]
 
     scale = height / 2
     screen = pg.display.set_mode((width, height))
@@ -78,26 +54,24 @@ def main():
 
     pg.init()
     clk = pg.time.Clock()
+
     end = False
-
-    phis1, phis2, phis3 = [phi1], [phi2], [phi3]
-    phis1_dot, phis2_dot, phis3_dot = [phi1_dot], [phi2_dot], [phi3_dot]
-
-    t = [0.0]
 
     while not end:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 end = True
+
         screen.fill(white)
 
-        phis = pendulums.get_next_state()[0].reshape((3,))
+        phis, phis_dot = pendulums.get_next_state()
+        phis.reshape((3,))
+        phis_dot.reshape((3,))
 
         phis1.append(phis[0])
         phis2.append(phis[1])
         phis3.append(phis[2])
 
-        phis_dot = pendulums.get_next_state()[1].reshape((3,))
         phis1_dot.append(phis_dot[0])
         phis2_dot.append(phis_dot[1])
         phis3_dot.append(phis_dot[2])
@@ -122,7 +96,7 @@ def main():
         canvas.draw_circle(red, p32, pend_radius, 0)
 
         pg.display.update()
-        clk.tick(fps)
+        clk.tick(1 / dt)
 
     phis1 = np.array(phis1)
     phis2 = np.array(phis2)
@@ -135,25 +109,25 @@ def main():
     fig, (phi1_plt, phi1_dot_plt, phi2_plt, phi2_dot_plt,
           phi3_plt, phi3_dot_plt) = plt.subplots(6, 1)
 
-    fig.suptitle('Phi and phi_dot plots')
+    fig.suptitle(r'$\varphi$ and $\dot \varphi$ plots')
 
     phi1_plt.plot(t, phis1)
-    phi1_plt.set_ylabel('phi1')
+    phi1_plt.set_ylabel(r'$\varphi_1$', rotation=0)
 
     phi1_dot_plt.plot(t, phis1_dot)
-    phi1_dot_plt.set_ylabel('phi1_dot')
+    phi1_dot_plt.set_ylabel(r'$\dot \varphi_1$', rotation=0)
 
     phi2_plt.plot(t, phis2)
-    phi2_plt.set_ylabel('phi2')
+    phi2_plt.set_ylabel(r'$\varphi_2$', rotation=0)
 
     phi2_dot_plt.plot(t, phis2_dot)
-    phi2_dot_plt.set_ylabel('phi2_dot')
+    phi2_dot_plt.set_ylabel(r'$\dot \varphi_2$', rotation=0)
 
     phi3_plt.plot(t, phis3)
-    phi3_plt.set_ylabel('phi3')
+    phi3_plt.set_ylabel(r'$\varphi_3$', rotation=0)
 
     phi3_dot_plt.plot(t, phis3_dot)
-    phi3_dot_plt.set_ylabel('phi3_dot')
+    phi3_dot_plt.set_ylabel(r'$\dot \varphi_3$', rotation=0)
 
     phi3_dot_plt.set_xlabel('time (s)')
 
@@ -161,4 +135,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+
+    pendulum1 = InitState(0.1, 0, 1)
+    pendulum2 = InitState(0.1, 0, 1)
+    pendulum3 = InitState(0.1, 0, 1)
+
+    pends = ConnectedPendulums(dt, pendulum1, pendulum2, pendulum3)
+
+    start_modeling(pends)

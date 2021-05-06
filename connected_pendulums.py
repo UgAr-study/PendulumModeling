@@ -18,7 +18,7 @@ class ConnectedPendulums:
     """ Numerical simulation of a double pendulum system using the angles of
     the pendulums """
 
-    def __init__(self, dt, pend1: InitState, pend3: InitState, pend2: InitState,
+    def __init__(self, dt: float, pend1: InitState, pend3: InitState, pend2: InitState,
                  k1: float = 1.0, k2: float = 1.0,
                  l: float = 1.0, betta: float = 0.1):
         """ dt is the time-step, th10 and th20 are the initial angles, thp10 and
@@ -43,6 +43,9 @@ class ConnectedPendulums:
                            [c21, c22, c23],
                            [c31, c32, c33]])
 
+    def get_timestep(self):
+        return self.dt
+
     def __acc(self):
         """compute the phi_dot_dot"""
         return -(np.dot(np.dot(LA.inv(self.A), self.B), self.phi_dot) +
@@ -51,39 +54,44 @@ class ConnectedPendulums:
     def get_next_state(self):
         """ Numerically solve the system angles for a single time step """
         acc = self.__acc()
-        self.phi_dot += acc * self.dt
-        self.phi += self.phi_dot * self.dt
+        self.phi_dot = self.phi_dot + acc * self.dt
+        self.phi = self.phi + self.phi_dot * self.dt
+        return self.phi, self.phi_dot
 
+    def get_current_state(self):
         return self.phi, self.phi_dot
 
 
-def main():
-    """ Run the test program """
+def show_plots(pendulums: ConnectedPendulums, duration: float = 40.0):
+    """ Make plots without animation """
     import matplotlib.pyplot as plt
-    dt = 0.1
-    t = np.arange(0, 100, dt)
 
-    pend1 = InitState(0.2, 0.1, 1)
-    pend2 = InitState(0.25, 0.01, 4)
-    pend3 = InitState(0.14, 0.15, 2)
+    t = np.arange(0, duration, dt)
 
-    pendulums = ConnectedPendulums(dt, pend1, pend2, pend3, 2, 3, 2, 0.4)
+    phis, phis_dot = pendulums.get_current_state()
+    phis.reshape((3,))
+    phis_dot.reshape((3,))
 
-    phis1, phis2, phis3 = [], [], []
-    phis1_dot, phis2_dot, phis3_dot = [], [], []
+    phis1, phis2, phis3 = [phis[0]], [phis[1]], [phis[2]]
+    phis1_dot, phis2_dot, phis3_dot = [phis_dot[0]], [phis_dot[1]], [phis_dot[2]]
 
-    print('Simulating...')
-    for ti in t:
-        phis = pendulums.get_next_state()[0].reshape((3,))
+    size = t.size
+    i = 1
+    while i < size:
+
+        phis, phis_dot = pendulums.get_next_state()
+        phis.reshape((3,))
+        phis_dot.reshape((3,))
 
         phis1.append(phis[0])
         phis2.append(phis[1])
         phis3.append(phis[2])
 
-        phis_dot = pendulums.get_next_state()[1].reshape((3,))
         phis1_dot.append(phis_dot[0])
         phis2_dot.append(phis_dot[1])
         phis3_dot.append(phis_dot[2])
+
+        i += 1
 
     phis1 = np.array(phis1)
     phis2 = np.array(phis2)
@@ -93,33 +101,43 @@ def main():
     phis2_dot = np.array(phis2_dot)
     phis3_dot = np.array(phis3_dot)
 
-    print('Finished!')
+    fig, (phi1_plt, phi1_dot_plt, phi2_plt, phi2_dot_plt,
+          phi3_plt, phi3_dot_plt) = plt.subplots(6, 1)
 
-    fig, (phi1, phi1_dot, phi2, phi2_dot, phi3, phi3_dot) = plt.subplots(6, 1)
-    fig.suptitle('A tale of 3 subplots')
+    fig.suptitle(r'$\varphi$ and $\dot \varphi$ plots')
 
-    phi1.plot(t, phis1)
-    phi1.set_ylabel('phi1')
+    phi1_plt.plot(t, phis1)
+    phi1_plt.set_ylabel(r'$\varphi_1$', rotation=0)
 
-    phi1_dot.plot(t, phis1_dot)
-    phi1_dot.set_ylabel('phi1_dot')
+    phi1_dot_plt.plot(t, phis1_dot)
+    phi1_dot_plt.set_ylabel(r'$\dot \varphi_1$', rotation=0)
 
-    phi2.plot(t, phis2)
-    phi2.set_ylabel('phi2')
+    phi2_plt.plot(t, phis2)
+    phi2_plt.set_ylabel(r'$\varphi_2$', rotation=0)
 
-    phi2_dot.plot(t, phis2_dot)
-    phi2_dot.set_ylabel('phi2_dot')
+    phi2_dot_plt.plot(t, phis2_dot)
+    phi2_dot_plt.set_ylabel(r'$\dot \varphi_2$', rotation=0)
 
-    phi3.plot(t, phis3)
-    phi3.set_ylabel('phi3')
+    phi3_plt.plot(t, phis3)
+    phi3_plt.set_ylabel(r'$\varphi_3$', rotation=0)
 
-    phi3_dot.plot(t, phis3_dot)
-    phi3_dot.set_ylabel('phi3_dot')
+    phi3_dot_plt.plot(t, phis3_dot)
+    phi3_dot_plt.set_ylabel(r'$\dot \varphi_3$', rotation=0)
 
-    phi3_dot.set_xlabel('time (s)')
+    phi3_dot_plt.set_xlabel('time (s)')
 
     plt.show()
 
 
+dt = 1 / 60
+print(dt)
+
 if __name__ == '__main__':
-    main()
+
+    pendulum1 = InitState(0.01, 0, 1)
+    pendulum2 = InitState(0.01, 0, 1)
+    pendulum3 = InitState(0.01, 0, 1)
+
+    pends = ConnectedPendulums(dt, pendulum1, pendulum2, pendulum3)
+
+    show_plots(pends)
